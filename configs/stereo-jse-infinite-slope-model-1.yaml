@@ -14,12 +14,12 @@ devices:
     device: plughw:CARD=sndrpihifiberry,DEV=0
     format: S32LE
 
-# JSE Infinite Slope Model 1 - Recommended FIR EQ Profile (to be generated in rePhase):
+# JSE Infinite Slope Model 1 - Native Biquad EQ Profile:
+# This uses CamillaDSP's built-in standard filters for simplicity. No external .wav files needed.
 # - 4.0 kHz Bell cut: -2.0 dB, Q 1.5 (Tame early tweeter glare)
 # - 12.0 kHz High-Shelf: +1.5 dB (Restore top-end "air" for vintage tweeter)
 # - 90 Hz Bell cut: -2.0 dB, Q 1.5 (Control typical cabinet/room mid-bass boom)
 # - 35 Hz Low-Shelf: +2.0 dB (Extend deep-bass response)
-# Note: Linear Phase FIR is recommended to preserve the original steep >100dB/octave crossover phase alignment.
 
 filters:
   preamp:
@@ -29,17 +29,37 @@ filters:
       inverted: false
       mute: false
 
-  fir_left:
-    type: Conv
+  bass_extend:
+    type: Biquad
     parameters:
-      type: Wav
-      filename: "/Users/johnny/code/camilladsp/coeffs/jse-model1-stereo-left.wav"
+      type: Lowshelf
+      freq: 35
+      slope: 6
+      gain: 2.0
 
-  fir_right:
-    type: Conv
+  midbass_cut:
+    type: Biquad
     parameters:
-      type: Wav
-      filename: "/Users/johnny/code/camilladsp/coeffs/jse-model1-stereo-right.wav"
+      type: Peaking
+      freq: 90
+      q: 1.5
+      gain: -2.0
+
+  tweeter_glare:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 4000
+      q: 1.5
+      gain: -2.0
+
+  air_boost:
+    type: Biquad
+    parameters:
+      type: Highshelf
+      freq: 12000
+      slope: 6
+      gain: 1.5
 
 mixers:
   stereo:
@@ -65,9 +85,15 @@ pipeline:
     channel: 0
     names:
       - preamp
-      - fir_left
+      - bass_extend
+      - midbass_cut
+      - tweeter_glare
+      - air_boost
   - type: Filter
     channel: 1
     names:
       - preamp
-      - fir_right
+      - bass_extend
+      - midbass_cut
+      - tweeter_glare
+      - air_boost
