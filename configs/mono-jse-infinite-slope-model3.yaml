@@ -1,0 +1,152 @@
+#
+# CamillaDSP Mono Configuration for JSE Infinite Slope Model 3 (Floorstanding)
+#
+# Sums the stereo input to a single mono signal (both output channels identical),
+# then applies the same tone/room correction chain as the stereo version.
+#
+# Goals:
+#   - Tone correction: tame vintage colorations inherent to late-'80s 3-way design
+#   - Room correction: control floor-boundary bass buildup, add loudness compensation
+#
+# Driver layout: 10" woofer / 4" midrange / 1" dome tweeter
+#
+# Tuning tips:
+#   - bass_room_control gain: increase cut if bass sounds boomy in your room
+#   - loudness_bass gain: reduce if bass feels heavy at your usual volume
+#   - presence_peak gain: increase cut if vocals/upper mids sound forward or bright
+#   - air_treble gain: reduce if your tweeters are still lively, increase if dull
+
+devices:
+  samplerate: 48000
+  chunksize: 1024
+  enable_rate_adjust: true
+  target_level: 1024
+  capture:
+    type: Alsa
+    channels: 2
+    device: plughw:Loopback,1,0
+    format: S16LE
+  playback:
+    type: Alsa
+    channels: 2
+    device: plughw:CARD=sndrpihifiberry,DEV=0
+    format: S32LE
+
+filters:
+  # 1. Subsonic filter — protects the 10" woofer from sub-bass rumble and
+  #    port noise that the passive crossover does not block.
+  subsonic:
+    type: Biquad
+    parameters:
+      type: Highpass
+      freq: 30.0
+      q: 0.707
+
+  # 2. Bass room control — reduces the floor/wall boundary hump that
+  #    floorstanders near walls typically exhibit around 60-90 Hz.
+  bass_room_control:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 75.0
+      q: 1.2
+      gain: -2.5
+
+  # 3. Low-mid cleanup — reduces the hollow "boxiness" / cabinet coloration
+  #    common in sealed and ported 3-way enclosures of this era.
+  low_mid_cleanup:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 220.0
+      q: 1.4
+      gain: -2.0
+
+  # 4. Lower presence cut — softens the lower presence step (150–1500 Hz range)
+  #    where older polypropylene and paper-cone mids can push forward.
+  lower_presence_cut:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 1200.0
+      q: 1.2
+      gain: -1.5
+
+  # 5. Crossover presence peak — smooths the steep mid-to-tweeter handoff
+  #    region around 2.5–3.5 kHz, which can sound "shouty" on older drivers.
+  presence_peak:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 3000.0
+      q: 2.0
+      gain: -2.0
+
+  # 6. Loudness bass shelf — compensates for Fletcher-Munson bass rolloff at
+  #    typical listening levels; also extends perceived low-end reach.
+  loudness_bass:
+    type: Biquad
+    parameters:
+      type: Lowshelf
+      freq: 80.0
+      slope: 6.0
+      gain: 3.0
+
+  # 7. Air treble shelf — restores sparkle to aging dome tweeters that have
+  #    lost sensitivity above 8–10 kHz over the decades.
+  air_treble:
+    type: Biquad
+    parameters:
+      type: Highshelf
+      freq: 9000.0
+      slope: 6.0
+      gain: 1.5
+
+mixers:
+  # Sum L+R to mono on both outputs. Each source is attenuated by -6 dB to
+  # prevent clipping when two full-scale signals are combined.
+  mono:
+    channels:
+      in: 2
+      out: 2
+    mapping:
+      - dest: 0
+        sources:
+          - channel: 0
+            gain: -6
+            inverted: false
+          - channel: 1
+            gain: -6
+            inverted: false
+      - dest: 1
+        sources:
+          - channel: 0
+            gain: -6
+            inverted: false
+          - channel: 1
+            gain: -6
+            inverted: false
+
+pipeline:
+  - type: Mixer
+    name: mono
+  - type: Filter
+    channel: 0
+    names:
+      - subsonic
+      - bass_room_control
+      - low_mid_cleanup
+      - lower_presence_cut
+      - presence_peak
+      - loudness_bass
+      - air_treble
+  - type: Filter
+    channel: 1
+    names:
+      - subsonic
+      - bass_room_control
+      - low_mid_cleanup
+      - lower_presence_cut
+      - presence_peak
+      - loudness_bass
+      - air_treble
