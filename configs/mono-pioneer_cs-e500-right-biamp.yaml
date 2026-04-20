@@ -1,0 +1,120 @@
+# CamillaDSP Bi-Amp Configuration for Right Pioneer CS-E500 Speaker
+# This config isolates the RIGHT input channel (1), splits it into two outputs,
+# and applies a 2-way active crossover alongside driver-specific EQ.
+
+devices:
+  samplerate: 48000
+  chunksize: 1024
+  enable_rate_adjust: true
+  target_level: 1024
+  capture:
+    type: Alsa
+    channels: 2
+    device: "hw:Loopback,1,0"
+    format: S32LE
+  playback:
+    type: Alsa
+    channels: 2
+    device: "plughw:CARD=sndrpihifiberry,DEV=0" # IMPORTANT: Change to actual sound card
+    format: S16LE
+
+mixers:
+  # Extract the right channel (1) and send it to both outputs (Tweeter and Woofer)
+  extract_right:
+    channels:
+      in: 2
+      out: 2
+    mapping:
+      - dest: 0
+        sources:
+          - channel: 1
+            gain: 0
+      - dest: 1
+        sources:
+          - channel: 1
+            gain: 0
+
+filters:
+  # General
+  MasterVolume:
+    type: Gain
+    parameters:
+      gain: 0
+      mute: false
+
+  # Active Crossover
+  Tweeter_HPF:
+    type: BiquadCombo
+    parameters:
+      type: LinkwitzRileyHighpass
+      freq: 3300 # Estimated 3.3kHz crossover point
+      order: 4   # 24dB/octave slope
+
+  Woofer_LPF:
+    type: BiquadCombo
+    parameters:
+      type: LinkwitzRileyLowpass
+      freq: 3300 # Estimated 3.3kHz crossover point
+      order: 4   # 24dB/octave slope
+
+  # CS-E500 Specific EQs
+  Highpass:
+    type: Biquad
+    parameters:
+      type: Highpass
+      freq: 40
+      q: 0.7
+
+  TameBassBoom:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 120
+      q: 1.5
+      gain: -3.0
+
+  BoostMids:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 1500
+      q: 1.0
+      gain: 2.5
+
+  TameTrebleHarshness:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 5000
+      q: 2.0
+      gain: -2.0
+
+pipeline:
+  - type: Mixer
+    name: extract_right
+
+  # Apply master volume to both channels
+  - type: Filter
+    channel: 0
+    names:
+      - MasterVolume
+  - type: Filter
+    channel: 1
+    names:
+      - MasterVolume
+
+  # Channel 0: Tweeter (Highs)
+  - type: Filter
+    channel: 0
+    names:
+      - Tweeter_HPF
+      - TameTrebleHarshness
+
+  # Channel 1: Woofer (Lows)
+  - type: Filter
+    channel: 1
+    names:
+      - Highpass
+      - Woofer_LPF
+      - TameBassBoom
+      - BoostMids
