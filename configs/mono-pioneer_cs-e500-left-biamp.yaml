@@ -89,6 +89,28 @@ filters:
       q: 2.0
       gain: -2.0
 
+  # OPTIONAL: Bass Boost
+  # Active in pipeline, but set to 0 gain by default.
+  # Adjust 'gain' to taste (e.g., 6.0 for moderate, 12.0 for heavy).
+  OptionalBassBoost:
+    type: Biquad
+    parameters:
+      type: Lowshelf
+      freq: 150
+      q: 0.7
+      gain: 0.0
+
+  # OPTIONAL: Treble Adjust
+  # Active in pipeline, but set to 0 gain by default.
+  # Adjust 'gain' up or down to tune the highs (e.g., -3.0 to soften, 3.0 to brighten).
+  OptionalTrebleAdjust:
+    type: Biquad
+    parameters:
+      type: Highshelf
+      freq: 8000
+      q: 0.7
+      gain: 0.0
+
 pipeline:
   - type: Mixer
     name: extract_left
@@ -109,6 +131,7 @@ pipeline:
     names:
       - Tweeter_HPF
       - TameTrebleHarshness
+      - OptionalTrebleAdjust
 
   # Channel 1: Woofer (Lows)
   - type: Filter
@@ -118,3 +141,4 @@ pipeline:
       - Woofer_LPF
       - TameBassBoom
       - BoostMids
+      - OptionalBassBoost
