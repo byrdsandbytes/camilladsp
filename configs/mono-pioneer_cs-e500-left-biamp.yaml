@@ -34,6 +34,22 @@ mixers:
           - channel: 0
             gain: 0
 
+  # OPTIONAL: Use this mixer to swap the final outputs if your amplifier cables
+  # are plugged into the wrong outputs (e.g. Tweeter goes to DAC Output 1 instead of 0).
+  swap_outputs:
+    channels:
+      in: 2
+      out: 2
+    mapping:
+      - dest: 0
+        sources:
+          - channel: 1
+            gain: 0
+      - dest: 1
+        sources:
+          - channel: 0
+            gain: 0
+
 filters:
   # General
   MasterVolume:
@@ -142,3 +158,8 @@ pipeline:
       - TameBassBoom
       - BoostMids
       - OptionalBassBoost
+
+  # OPTIONAL: Flip outputs at the very end
+  - type: Mixer
+    name: swap_outputs
+
