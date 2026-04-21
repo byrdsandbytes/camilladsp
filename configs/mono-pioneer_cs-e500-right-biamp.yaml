@@ -160,6 +160,6 @@ pipeline:
       - OptionalBassBoost
 
   # OPTIONAL: Flip outputs at the very end
-  - type: Mixer
-    name: swap_outputs
+ # - type: Mixer
+ #   name: swap_outputs
 
